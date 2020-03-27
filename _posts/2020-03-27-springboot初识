@@ -1,0 +1,77 @@
+---
+layout:     post
+title:      springboot初识
+subtitle:   springboot
+date:       2020-03-27
+author:     summer
+header-img: img/post-bg-ios9-web.jpg
+catalog: 	 true
+tags:
+    - springboot
+---
+## Hey
+>Springboot
+
+springboot是spring的一套快速配置脚手架，可以基于springboot快速开发单个微服务，而springcloud是基于springboot，为微服务体系开发中的架构问题，提供一整套的解决方案，是关注全局的服务治理框架。springboot可以离开springcloud独立开发项目，但是springcloud离不开springboot，属于依赖关系。
+使用的版本：Dalston，简称D版本
+
+springboot：
+它是一个全新的框架，设计的目的是用来简化spring应用的初始搭建以及开发过程，这个框架使用了特定的方式来进行配置，从而使得开发人员不再需要定义样板化的配置，我自己理解觉得springboot其实也不算新的框架，它只是默认配置了很多框架的使用方式，就像maven整合了所有的jar包，springboot整合了所有的框架。优点就是简单、快速。方便！
+src结构：
+main
+java-----application.java(main方法)主程序入口，程序开发
+resources-----配置文件，使用yml,properties两种，yml层次感强代码量少
+test/java-----测试程序
+pom文件中核心有两个模块：spring-boot-starter和spring-boot-starter-test
+还有一个比较简单就是当我们编写controller的时候，使用的注解也不同，采用的是RestController，意思是controller里面的方法都已json的格式输出，但是却不需要配置jackjson了。
+
+springcloud：
+服务发现：3台（高可用2台以上）
+熔断，熔断怎么做？有什么作用？配置什么，打开关闭
+网管
+权限验证，单点登录
+Eureka：是一个基于REST的服务，
+
+
+项目以springboot和springcloud为基础父工程，然后将springcloud用作依赖管理，设置scope为import，
+（1）eureka:服务中心注册中心，注册中心是一个很关键的服务，如果是单点的话，遇到故障就是毁灭性的，所以配置的是集群，通过互相注册的方式来实现高可用的部署。启动类那块会有三个listener，会有心跳检测的功能，用来检测服务是否存活
+配置文件：可以将三台分别配置三个配置文件，配置三个不同的地址，然后打包的时候active可以指明使用的配置就可以
+开发环境下可以快速清理已经断掉的不可用的服务，配置文件配置即可
+在service中的yml配置文件配置eureka,  单独的小服务
+（2）feign：服务的提供和调用，使用的话很简单，通过两个注解，@EnableDiscoveryClient,@FeignClient，第一个是可以启动服务注册和发现，第二个是启用feign进行远程调用。
+（3）Hystrix：熔断器，如果服务A去调用服务B，服务B宕掉了，那么就采取熔断，服务A不再调用服务B，直接返回一个快速错误，既可以快速给用户一个响应，也可以不用占用CPU资源。服务之间的雪崩效应，a调用B,B调用C，一旦A失败了，连着全部都不可用，进而造成整个系统都不可用，熔断机制，在返回快速错误的5秒内，在5秒之后尝试重新访问服务，如果成功那么熔断器会关掉，这个服务可以再次重新使用。启动类使用两个注解@EnableHystrixDashboard,@EnableCircuitBreaker
+配置文件：打开熔断机制 feign.hystrix.enable=true;
+创建回调类，写明服务熔断的时候返回的内容
+在服务调用注解中，再添加指定的fallback类
+使用熔断的场景：后台展现的web工程添加熔断，而service层会调用熔断，这样可以进行熔断监控。基本每个微服务都使用到了熔断。
+（4）turbine：是熔断的监控中心，可以看到哪里出了问题，不归我们管是运维看的单独的小服务，可以用每个服务之间的监听
+（5）zipkin：分布式链路追踪，服务的运维治理架构，也是运维看的，作为一个单独的小服务进行配置，由于系统的拆分导致链路愈发的复杂，如果整个请求变慢或者不可用的时候，可以通过快速定位服务故障点。单独的小服务
+（6）gateway：网关，有两种zuul比较稳定，但是springcloud有自己推荐的网管gateway，主要功能是可以提供外部的应用访问内部的微服务的方式
+需要依赖，具体配置文件进行添加，可以让这个组件单独作为一个微服务，单后配置一下外部访问的地址，再配置重定向的地址可以填写serverID（注册微服务的名字），zuul的核心是filter，大部分功能基于过滤器来实现，单独的小服务
+（7）config：配置中心，可以解决分布式系统的配置管理方案，
+配置文件需要配置Git仓库的地址，还有账号和密码，还提供本地存储，只需要加一条属性sprin.profiles.active=native,系统就会默认从一个地址下进行检索，也可以指定文件的本地路径，在启动类中添加@EnableConfigServer，激活对配置中心的支持
+（8）bus：消息总线，实现的方式是AMQP消息代理作为通道，因此在配置时除了要开启消息跟踪，还要配置rabbitMQ
+（9）druid：数据源连接池，阿里的性能比较好的数据源连接池，不仅仅是一个数据源连接池，还可以监控，springcloud中使用Druid比c3p0更好，可以监控数据库的访问性能，数据库密码加密，sql执行日志。
+
+
+
+
+dubbo的服务调用方式：RPC     springcloud的调用方式：REST API  
+两者相比dubbo支持的数据容量比较大，因为速度快，所以效率高
+dubbo的服务注册中心：zookeeper    springcloud的注册中心：eureka
+
+dubbo是阿里巴巴的一个开源的高性能服务框架，包含远程通讯，集群容错和自动发现三个核心部分。它提供透明化的远程方法调用，实现像调用本地方法一样调用远程方法。
+dubbo是SOA那个阶段的产物，它的关注点主要在于服务的调用，流量分发监控和熔断，而springcloud则是微服务时代的技术，关注点是微服务的治理。
+
+
+dubbo和springcloud：
+dubbo开发的难度大在jar包依赖的问题，很多大型的项目开发时因为jar升级问题会很难受，springcloud很完美的解决了这个问题，并且他也拥有很多完善的组件，对于熔断监控，配置等有很好的支持。体积小，每个服务比较小，也比较适合分工协作。
+
+
+
+
+
+
+
+
+
